@@ -27,6 +27,9 @@ from cloudinit import safeyaml
 
 from distutils.spawn import find_executable
 
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 LOG = logging.getLogger(__name__)
 
 # This cloud-init datasource was designed for use with CentOS 7,
@@ -82,10 +85,10 @@ class DataSourceVMwareGuestInfo(sources.DataSource):
             self.metadata = json.loads(metadata)
 
         # Get the YAML userdata. Can be plain-text, base64, or gzip+base64.
-        self.userdata_raw = self._get_encoded_guestinfo_data('userdata')
+        self.userdata_raw = self._mime_data(self._get_encoded_guestinfo_data('userdata'), 'userdata')
 
         # Get the YAML vendordata. Can be plain-text, base64, or gzip+base64.
-        self.vendordata_raw = self._get_encoded_guestinfo_data('vendordata')
+        self.vendordata_raw = self._mime_data(self._get_encoded_guestinfo_data('vendordata'), 'vendordata')
 
         return True
 
@@ -109,6 +112,13 @@ class DataSourceVMwareGuestInfo(sources.DataSource):
             return self.metadata['instance-id']
         with open('/sys/class/dmi/id/product_uuid', 'r') as id_file:
             return str(id_file.read()).rstrip()
+
+    def _mime_data(self,contents,filename):
+        combined_message = MIMEMultipart()
+        sub_message = MIMEText(contents, 'cloud-config', 'UTF-8')
+        sub_message.add_header('Content-Disposition', 'attachment; filename="%s"' % (filename))
+        combined_message.attach(sub_message)
+        return  combined_message.as_string()
 
     def _get_encoded_guestinfo_data(self, key):
         data = self._get_guestinfo_value(key)
