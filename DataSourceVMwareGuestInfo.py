@@ -102,7 +102,7 @@ class DataSourceVMwareGuestInfo(sources.DataSource):
                 # and return it.
                 net_config = safeyaml.load(data)
                 LOG.debug("Loaded network config: %s", net_config)
-                return net_config
+                return net_config.get('network')
         return None
 
     def get_instance_id(self):
